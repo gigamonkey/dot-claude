@@ -1,7 +1,7 @@
 ---
 name: plans-cleanup
-description: Use this skill to clean up the plans/ directory, or specific plans named as arguments. Triggers when the user asks to "clean up plans", "tidy the plans directory", "move done plans", "update next-steps", or after a work session that completed one or more plans.
-version: 1.1.0
+description: Use this skill to clean up the plans/ directory, or specific plans named as arguments. Triggers only when the user asks to "clean up plans", "tidy the plans directory", "move done plans", or "update next-steps" — never automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
+version: 1.2.0
 ---
 
 # Plans Cleanup Skill
@@ -45,6 +45,11 @@ The scoped mode exists so the session that **did the implementation** can
 clean up its own plan while it still has the context — it knows better
 than any later session where the implementation diverged from the plan
 (see "Changes to the plan" below) and what residue is real.
+
+However, **don't run this cleanup automatically right after implementing
+a plan**. Wait until the user has reviewed and approved the
+implementation — cleanup happens when they ask for it, not as an
+automatic final step of implementation.
 
 ## Procedure
 
@@ -157,6 +162,10 @@ record residue`. In a yolo session, commit on the current branch.
 
 - **Never delete a plan** — done plans move to `done/`; only
   `next-steps.md` content gets cut.
+
+- **Don't clean up a plan you just implemented until the user approves
+  the implementation** — the cleanup is user-initiated, not an automatic
+  post-implementation step.
 
 - Don't read files already in `plans/done/` to build the summary; the
   active plans and the current `next-steps.md` are the inputs.
