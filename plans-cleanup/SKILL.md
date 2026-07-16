@@ -1,7 +1,7 @@
 ---
 name: plans-cleanup
-description: Use this skill to clean up the plans/ directory, or specific plans named as arguments. Triggers only when the user asks to "clean up plans", "tidy the plans directory", "move done plans", or "update next-steps" — never automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
-version: 1.2.0
+description: Use this skill to clean up the plans/ directory, or specific plans named as arguments; also to abandon, defer, or revive a named plan. Triggers only when the user asks to "clean up plans", "tidy the plans directory", "move done plans", "update next-steps", "abandon the X plan", "defer the X plan", or "revive the X plan" — never automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
+version: 1.3.0
 ---
 
 # Plans Cleanup Skill
@@ -9,7 +9,9 @@ version: 1.2.0
 Clean up `plans/` so it reflects only what remains to be done: completed
 plans move to `plans/done/`, their loose ends get recorded, and
 `plans/next-steps.md` is rewritten as a forward-looking statement — not a
-history.
+history. Also handles single-plan moves on request: **abandon** (to
+`plans/abandoned/`), **defer** (to `plans/deferred/`), and **revive**
+(back to `plans/`).
 
 ## The invariant this skill maintains
 
@@ -22,13 +24,23 @@ history.
   future session must know has to live in `next-steps.md` or the plan
   still in `plans/`.)
 
+- `plans/abandoned/` = plans that won't be implemented. Kept for the
+  record, but out of play: not read during cleanup, not mentioned in
+  `next-steps.md`.
+
+- `plans/deferred/` = plans intentionally set aside for later. Also out
+  of play — not read during cleanup, not mentioned in `next-steps.md` —
+  until the user revives them.
+
 - `plans/next-steps.md` = a brief statement of **what should happen
   next**: where things stand in a few sentences, then the remaining work.
   No changelog, no session-by-session updates, no landed-work narratives.
+  It covers only plans at the top level of `plans/` — never abandoned or
+  deferred ones.
 
-## Scope: full sweep vs. specific plans
+## Scope: full sweep, specific plans, or a single move
 
-The skill runs in one of two modes:
+The skill runs in one of three modes:
 
 - **Full sweep** (no arguments): assess every plan in `plans/`, as
   described below.
@@ -41,6 +53,12 @@ The skill runs in one of two modes:
   prune any of their now-done items). Don't rewrite unrelated sections or
   reassess other plans.
 
+- **Abandon / defer / revive** (the user names a plan and the operation,
+  e.g. "abandon the foo-bar plan", "defer the widget-enhancements plan",
+  "revive the foo-bar plan"): move that one plan and update
+  `next-steps.md` accordingly — see "Abandoning, deferring, and reviving
+  plans" below. No status assessment, no full rewrite of `next-steps.md`.
+
 The scoped mode exists so the session that **did the implementation** can
 clean up its own plan while it still has the context — it knows better
 than any later session where the implementation diverged from the plan
@@ -51,12 +69,63 @@ a plan**. Wait until the user has reviewed and approved the
 implementation — cleanup happens when they ask for it, not as an
 automatic final step of implementation.
 
+## Abandoning, deferring, and reviving plans
+
+These are single-plan moves, done only when the user explicitly asks —
+never decide on your own that a plan should be abandoned or deferred.
+The distinction: **abandoned** = won't be implemented; **deferred** =
+set aside, intended for later.
+
+To abandon or defer a plan:
+
+1. Move it (create the directory if it doesn't exist yet):
+
+   ```bash
+   git mv plans/<plan>.md plans/abandoned/<plan>.md   # or plans/deferred/
+   ```
+
+2. Update `next-steps.md`: remove the plan from the remaining-plans list
+   and drop anything that exists only to support it (residue items,
+   ordering dependencies that named it). If other remaining work referred
+   to it ("X before <plan> because …"), rewrite those sentences so they
+   stand without it. Do **not** add an "abandoned/deferred plans" section
+   — `next-steps.md` stays silent about plans that are out of play.
+
+3. If the reason for abandoning/deferring is known and non-obvious,
+   append a one-line note at the bottom of the moved plan file (e.g.
+   `**Abandoned YYYY-MM-DD:** superseded by <other-plan>.`) so a future
+   reader — or a revival — has the context. Don't editorialize beyond
+   what the user said.
+
+To revive a plan:
+
+1. Move it back from whichever directory it's in:
+
+   ```bash
+   git mv plans/abandoned/<plan>.md plans/<plan>.md   # or plans/deferred/
+   ```
+
+   If the plan isn't found in either directory, say so and stop — don't
+   guess at near-matching names without confirming.
+
+2. Read the revived plan and skim it against the current code — if it has
+   sat for a while, its claims may be stale. Don't rewrite it; just flag
+   anything obviously out of date to the user.
+
+3. Update `next-steps.md`: add the plan to the remaining-plans list (one
+   or two sentences, same style as the rest) and note any ordering
+   dependencies with the other remaining plans. Remove the
+   abandoned/deferred note from the plan file if one was added.
+
+Commit in the established style, e.g. `plans: defer widget-enhancements`
+or `plans: revive foo-bar, update next-steps.md`.
+
 ## Procedure
 
 ### 1. Inventory and assess each plan
 
-List `plans/*.md` (skip `done/`) — or, in scoped mode, just the named
-plans. For each plan, determine its status by
+List `plans/*.md` (skip `done/`, `abandoned/`, and `deferred/`) — or, in
+scoped mode, just the named plans. For each plan, determine its status by
 **checking the codebase and git history, not the plan's own text** — a
 plan never says it's done; the code does:
 
@@ -160,15 +229,21 @@ record residue`. In a yolo session, commit on the current branch.
 
 ## Cautions
 
-- **Never delete a plan** — done plans move to `done/`; only
-  `next-steps.md` content gets cut.
+- **Never delete a plan** — done plans move to `done/`, dropped plans to
+  `abandoned/`, postponed plans to `deferred/`; only `next-steps.md`
+  content gets cut.
+
+- **Never abandon or defer a plan on your own initiative** — those moves
+  happen only when the user names the plan and asks for them.
 
 - **Don't clean up a plan you just implemented until the user approves
   the implementation** — the cleanup is user-initiated, not an automatic
   post-implementation step.
 
-- Don't read files already in `plans/done/` to build the summary; the
-  active plans and the current `next-steps.md` are the inputs.
+- Don't read files already in `plans/done/`, `plans/abandoned/`, or
+  `plans/deferred/` to build the summary; the active plans and the
+  current `next-steps.md` are the inputs. (The exception is a revive,
+  which reads the one plan being revived.)
 
 - When in doubt whether a residue item is still open, check the code; if
   still unsure, keep it (cheap) rather than silently dropping it.
