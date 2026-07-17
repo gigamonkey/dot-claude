@@ -100,7 +100,17 @@ To abandon or defer a plan:
    stand without it. Do **not** add an "abandoned/deferred plans" section
    — `next-steps.md` stays silent about plans that are out of play.
 
-3. If the reason for abandoning/deferring is known and non-obvious,
+3. If `plans/functionality.md` exists, remove **unchecked** items that
+   exist only because of this plan — functionality it called for that
+   isn't implemented and that no other active plan calls for. Keep any
+   unchecked item another active plan also wants, and never touch checked
+   items (they describe implemented functionality regardless of which
+   plan drove it). If unsure whether an item came only from this plan,
+   keep it. Remove a section header only if the removal leaves the
+   section empty. (A revival re-adds what's removed here — the plan file
+   itself remains the record of what it called for.)
+
+4. If the reason for abandoning/deferring is known and non-obvious,
    append a one-line note at the bottom of the moved plan file (e.g.
    `**Abandoned YYYY-MM-DD:** superseded by <other-plan>.`) so a future
    reader — or a revival — has the context. Don't editorialize beyond
@@ -125,6 +135,13 @@ To revive a plan:
    or two sentences, same style as the rest) and note any ordering
    dependencies with the other remaining plans. Remove the
    abandoned/deferred note from the plan file if one was added.
+
+4. If `plans/functionality.md` exists, re-add unchecked items for
+   user-visible functionality the revived plan calls for that isn't
+   implemented and isn't already listed — same placement rules as
+   cleanup step 4 (fit items into existing sections, match the file's
+   style). If some of it has been implemented in the meantime, list
+   those pieces checked.
 
 Commit in the established style, e.g. `plans: defer widget-enhancements`
 or `plans: revive foo-bar, update next-steps.md`.
