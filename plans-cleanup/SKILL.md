@@ -108,7 +108,8 @@ To abandon or defer a plan:
    plan drove it). If unsure whether an item came only from this plan,
    keep it. Remove a section header only if the removal leaves the
    section empty. (A revival re-adds what's removed here — the plan file
-   itself remains the record of what it called for.)
+   itself remains the record of what it called for.) Report the change
+   summary in numbers, as described in cleanup step 4.
 
 4. If the reason for abandoning/deferring is known and non-obvious,
    append a one-line note at the bottom of the moved plan file (e.g.
@@ -141,7 +142,8 @@ To revive a plan:
    implemented and isn't already listed — same placement rules as
    cleanup step 4 (fit items into existing sections, match the file's
    style). If some of it has been implemented in the meantime, list
-   those pieces checked.
+   those pieces checked. Report the change summary in numbers, as
+   described in cleanup step 4.
 
 Commit in the established style, e.g. `plans: defer widget-enhancements`
 or `plans: revive foo-bar, update next-steps.md`.
@@ -274,6 +276,12 @@ the user rather than silently deleting it.
 
 In scoped mode, limit all three updates to functionality touched by the
 named plans.
+
+Whenever `functionality.md` changes — here or in an abandon, defer, or
+revive — report a summary of the changes to the user in numbers: how
+many items were checked off, how many added checked, how many added
+unchecked, and how many removed (e.g. "functionality.md: 3 checked off,
+2 added unchecked, 1 removed"). Omit zero counts.
 
 ### 5. Commit
 
