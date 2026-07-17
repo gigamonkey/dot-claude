@@ -1,7 +1,7 @@
 ---
 name: plans-cleanup
 description: Use this skill to clean up the plans/ directory, or specific plans named as arguments; also to abandon, defer, or revive a named plan. Triggers only when the user asks to "clean up plans", "tidy the plans directory", "move done plans", "update next-steps", "abandon the X plan", "defer the X plan", or "revive the X plan" — never automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
-version: 1.3.0
+version: 1.4.0
 ---
 
 # Plans Cleanup Skill
@@ -9,9 +9,10 @@ version: 1.3.0
 Clean up `plans/` so it reflects only what remains to be done: completed
 plans move to `plans/done/`, their loose ends get recorded, and
 `plans/next-steps.md` is rewritten as a forward-looking statement — not a
-history. Also handles single-plan moves on request: **abandon** (to
-`plans/abandoned/`), **defer** (to `plans/deferred/`), and **revive**
-(back to `plans/`).
+history. If `plans/functionality.md` exists, it is brought up to date as
+part of the cleanup. Also handles single-plan moves on request:
+**abandon** (to `plans/abandoned/`), **defer** (to `plans/deferred/`),
+and **revive** (back to `plans/`).
 
 ## The invariant this skill maintains
 
@@ -38,6 +39,13 @@ history. Also handles single-plan moves on request: **abandon** (to
   It covers only plans at the top level of `plans/` — never abandoned or
   deferred ones.
 
+- `plans/functionality.md` (optional — only some projects have it) = an
+  outline of **user-visible functionality**, organized into sections with
+  Markdown headers, where implemented items are checked (`- [x]`) and
+  not-yet-implemented items are unchecked (`- [ ]`). When present, the
+  checked items match what the code actually does and the unchecked items
+  match what active plans call for.
+
 ## Scope: full sweep, specific plans, or a single move
 
 The skill runs in one of three modes:
@@ -50,8 +58,9 @@ The skill runs in one of three modes:
   implemented a plan is asked to clean it up): assess and move **only the
   named plans**, but still update `next-steps.md` for what those moves
   change (record their residue, drop them from the remaining-plans list,
-  prune any of their now-done items). Don't rewrite unrelated sections or
-  reassess other plans.
+  prune any of their now-done items). If `plans/functionality.md` exists,
+  update it for the named plans' functionality too (step 4). Don't
+  rewrite unrelated sections or reassess other plans.
 
 - **Abandon / defer / revive** (the user names a plan and the operation,
   e.g. "abandon the foo-bar plan", "defer the widget-enhancements plan",
@@ -216,9 +225,43 @@ Strip aggressively:
 The test: every sentence in the new `next-steps.md` should help someone
 start the remaining work. If it only explains the past, cut it.
 
-### 4. Commit
+### 4. Update functionality.md (if present)
 
-One commit for the whole cleanup, in the established style:
+Check whether `plans/functionality.md` exists. If it doesn't, skip this
+step — don't create it. If it does, it's an outline of user-visible
+functionality organized into sections (`#`/`##`/`###` headers), with
+implemented items checked (`- [x]`) and not-yet-implemented items
+unchecked (`- [ ]`). Bring it up to date:
+
+1. **Check off what now exists.** For each unchecked item, verify against
+   the code (same evidence standard as step 1 — the code decides, not a
+   plan's text) and flip `- [ ]` to `- [x]` for functionality that's now
+   implemented. Leave genuinely unimplemented items unchecked.
+
+2. **Add recently added functionality.** If work that landed recently
+   (the plans just moved to `done/`, recent commits) introduced
+   user-visible functionality not yet listed, add it as checked items.
+
+3. **Add planned functionality.** If plans still in `plans/` call for
+   specific user-visible functionality not yet listed, add it as
+   unchecked items.
+
+Place new items in the section whose header fits them; only add a new
+section if nothing existing fits. Match the file's style — item
+granularity, phrasing, nesting depth. Only **user-visible** functionality
+belongs here: internal refactors, infrastructure, and residue-type
+follow-ups stay in `next-steps.md`, not this file. Don't remove or
+rewrite existing items beyond flipping their checkboxes; if an existing
+item looks wrong (e.g. checked but the feature doesn't exist), flag it to
+the user rather than silently deleting it.
+
+In scoped mode, limit all three updates to functionality touched by the
+named plans.
+
+### 5. Commit
+
+One commit for the whole cleanup — including any `functionality.md`
+update — in the established style:
 
 ```
 plans: <what moved / what changed>, rewrite next-steps.md
