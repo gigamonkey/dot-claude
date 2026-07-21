@@ -9,28 +9,6 @@ codebase as it was when they were written; the code has likely changed since
 then and the plans may be misleading. If you need context from a completed
 plan, the user will tell you.
 
-## Git Worktree Workflow
-
-Worktree branches are based on `origin/main`, not local `main`. **Always push
-local `main` to `origin/main` before starting a worktree session** to avoid the
-worktree missing unpushed commits.
-
-When creating a worktree (via `EnterWorktree` or manually), the new branch is
-named `worktree-<name>` and automatically tracks `origin/main` as its upstream.
-**Always unset the upstream immediately** so that a plain `git push` doesn't
-accidentally push to main:
-
-```bash
-git branch --unset-upstream
-```
-
-When ready to push, use `-u` so the local branch tracks the new remote branch
-for all subsequent pushes:
-
-```bash
-git push -u origin HEAD
-```
-
 ## Committing inside a yolo session
 
 When running inside a yolo container (`yolo.py` — Claude Code in an ephemeral
