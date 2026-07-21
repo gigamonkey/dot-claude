@@ -1,22 +1,9 @@
-.credentials.json
-.last-cleanup
-.last-update-result.json
-.yolo-status/
-backups/
-cache/
-debug/
-file-history/
-history.jsonl
-paste-cache/
-plugins/
-policy-limits.json
-projects/
-remote-settings.json
-session-env/
-sessions/
-settings.json
-shell-snapshots/
-stats-cache.json
-statusline-command.sh
-tasks/
-telemetry/
+# Ignore everything in this dir by default
+/*
+
+# But don't ignore CLAUDE, .gitignore or the skills dir. Absolute patterns let
+# global rules like *~ still work. Can add patterns here if there are other
+# things we want to track in git.
+!/CLAUDE.md
+!/.gitignore
+!/skills/
