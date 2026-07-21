@@ -1,2 +1,22 @@
-# We use Claude to work on this lets not save local settings here.
-.claude/settings.local.json
+.credentials.json
+.last-cleanup
+.last-update-result.json
+.yolo-status/
+backups/
+cache/
+debug/
+file-history/
+history.jsonl
+paste-cache/
+plugins/
+policy-limits.json
+projects/
+remote-settings.json
+session-env/
+sessions/
+settings.json
+shell-snapshots/
+stats-cache.json
+statusline-command.sh
+tasks/
+telemetry/
