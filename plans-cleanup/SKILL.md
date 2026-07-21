@@ -1,7 +1,7 @@
 ---
 name: plans-cleanup
-description: Use this skill to clean up the plans/ directory, or specific plans named as arguments; also to abandon, defer, or revive a named plan. Triggers only when the user asks to "clean up plans", "tidy the plans directory", "move done plans", "update next-steps", "abandon the X plan", "defer the X plan", or "revive the X plan" — never automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
-version: 1.4.0
+description: Use this skill to clean up the plans/ directory, or specific plans named as arguments; to abandon, defer, or revive a named plan; or to write a new plan. Triggers when the user asks to "clean up plans", "tidy the plans directory", "move done plans", "update next-steps", "abandon the X plan", "defer the X plan", "revive the X plan", "write a plan", or "make a plan" — cleanup never runs automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
+version: 1.5.0
 ---
 
 # Plans Cleanup Skill
@@ -13,6 +13,17 @@ history. If `plans/functionality.md` exists, it is brought up to date as
 part of the cleanup. Also handles single-plan moves on request:
 **abandon** (to `plans/abandoned/`), **defer** (to `plans/deferred/`),
 and **revive** (back to `plans/`).
+
+## Writing a new plan
+
+When the user asks you to "write a plan" or "make a plan" for some piece
+of work, that means writing a plan file into the repo's `plans/`
+directory (e.g. `plans/<plan-name>.md`, kebab-case, matching the naming
+of plans already there) — not just producing a plan inline in the
+conversation.
+
+If `plans/` doesn't exist yet, don't create it unprompted: ask the user
+whether to create it before writing anything.
 
 ## The invariant this skill maintains
 
