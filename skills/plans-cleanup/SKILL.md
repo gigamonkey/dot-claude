@@ -1,7 +1,7 @@
 ---
 name: plans-cleanup
-description: Use this skill to clean up the plans/ directory, or specific plans named as arguments; to abandon, defer, or revive a named plan; or to write a new plan. Triggers when the user asks to "clean up plans", "tidy the plans directory", "move done plans", "update next-steps", "abandon the X plan", "defer the X plan", "revive the X plan", "write a plan", or "make a plan" — cleanup never runs automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
-version: 1.5.0
+description: Use this skill to clean up the plans/ directory (in the working tree, or on a separate `plans` branch), or specific plans named as arguments; to abandon, defer, or revive a named plan; or to write a new plan. Triggers when the user asks to "clean up plans", "tidy the plans directory", "move done plans", "update next-steps", "abandon the X plan", "defer the X plan", "revive the X plan", "write a plan", or "make a plan" — cleanup never runs automatically after implementing a plan; wait for the user to approve the implementation and request cleanup.
+version: 1.6.0
 ---
 
 # Plans Cleanup Skill
@@ -14,6 +14,76 @@ part of the cleanup. Also handles single-plan moves on request:
 **abandon** (to `plans/abandoned/`), **defer** (to `plans/deferred/`),
 and **revive** (back to `plans/`).
 
+## Where plans live
+
+Resolve where `plans/` is **once, at the start**, and use that for every
+path below. There are two layouts:
+
+1. **In the working tree** — `plans/` exists at the repo root. This is
+   the common case; every `plans/...` path in this skill is literal.
+
+2. **On a `plans` branch** — the working tree has no `plans/`, but the
+   repo has a branch named `plans` (local `refs/heads/plans`, or only
+   `origin/plans`). Repos that send PRs upstream keep plans on an orphan
+   branch like this so planning documents never pollute a PR. The branch
+   holds a `plans/` directory at its root and nothing else, and is edited
+   through a worktree (see below).
+
+Check in that order:
+
+```bash
+test -d plans && echo "layout 1: working tree"
+git rev-parse --verify --quiet refs/heads/plans \
+  || git rev-parse --verify --quiet refs/remotes/origin/plans   # layout 2
+```
+
+If neither exists, don't create anything unprompted: ask the user whether
+to create `plans/` — in the working tree, or as a new orphan `plans`
+branch if they don't want plans in the branches they PR from — before
+writing anything. To create the branch:
+`git worktree add --orphan -b plans "$WT"`, then add `plans/` inside it.
+
+If the working tree **is** the `plans` branch (it contains only
+`plans/`), layout 1 applies for the plan files, but the code lives on
+other branches: verify a plan's claims with `git grep <pattern> <branch>
+-- <dir>`, `git show <branch>:<file>`, and `git log <branch>`, using the
+branch the plan targets (the plan or its commit message usually names
+it; otherwise the main branch).
+
+### Working through a `plans` worktree (layout 2)
+
+1. Look for an existing worktree of the branch in
+   `git worktree list --porcelain` (the entry whose `branch` line is
+   `refs/heads/plans`):
+
+   - Listed and reachable (`test -d <path>/plans`): use it.
+
+   - Listed but not reachable — typical inside a yolo container, where
+     other checkouts on the host aren't mounted and show as `prunable`
+     even though they exist — stop and tell the user: the plans worktree
+     at `<path>` isn't visible from this session, so run the cleanup from
+     a session on that worktree or the `plans` branch, or remove the
+     worktree first. Do **not** `git worktree prune`, `git worktree add
+     --force`, or commit to the branch with plumbing; all three desync
+     the host's checkout.
+
+   - Not listed: add a temporary one in the scratchpad and remove it
+     once the commit is made:
+
+     ```bash
+     WT="$SCRATCHPAD/plans-wt"
+     git worktree add "$WT" plans                            # local branch exists
+     git worktree add --track -b plans "$WT" origin/plans    # only origin/plans exists
+     ...
+     git worktree remove "$WT"
+     ```
+
+2. Everywhere this skill says `plans/...`, read `"$WT"/plans/...`. Run
+   `git mv`, `git add`, and `git commit` inside `$WT` (or with
+   `git -C "$WT"`) so the commit lands on the `plans` branch. Commands
+   that check the **code** — `git log`, `rg`, reading source — run in
+   the original working tree, never in `$WT`.
+
 ## Writing a new plan
 
 When the user asks you to "write a plan" or "make a plan" for some piece
@@ -22,8 +92,8 @@ directory (e.g. `plans/<plan-name>.md`, kebab-case, matching the naming
 of plans already there) — not just producing a plan inline in the
 conversation.
 
-If `plans/` doesn't exist yet, don't create it unprompted: ask the user
-whether to create it before writing anything.
+If `plans/` doesn't exist in the working tree, check for a `plans`
+branch before asking to create anything — see "Where plans live".
 
 ## The invariant this skill maintains
 
@@ -174,7 +244,9 @@ rg -l <key-identifier-from-plan> website/   # do the described changes exist?
 ```
 
 Verify a few of the plan's concrete claims (files it says it will create,
-functions it will add, schema changes). Classify:
+functions it will add, schema changes). In layout 2 these checks run
+against the code in the original working tree, not the plans worktree.
+Classify:
 
 - **Complete** — the substance is implemented, even if small residue
   remains. Move it to `done/` and record the residue (step 2).
@@ -304,7 +376,9 @@ plans: <what moved / what changed>, rewrite next-steps.md
 ```
 
 e.g. `plans: content-migration-implementation is done — move to done/,
-record residue`. In a yolo session, commit on the current branch.
+record residue`. In a yolo session, commit on the current branch. In
+layout 2 the commit is made inside the plans worktree, so it lands on
+the `plans` branch regardless of what the working tree has checked out.
 
 ## Cautions
 
@@ -326,3 +400,7 @@ record residue`. In a yolo session, commit on the current branch.
 
 - When in doubt whether a residue item is still open, check the code; if
   still unsure, keep it (cheap) rather than silently dropping it.
+
+- In layout 2, remove a worktree you added (`git worktree remove "$WT"`)
+  once the commit is made, and never prune or force-add worktrees to get
+  at a `plans` checkout that isn't reachable from the session.
