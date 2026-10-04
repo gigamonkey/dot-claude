@@ -50,6 +50,14 @@ asserts:
 Report what was checked and fix what the merge invalidated (as a follow-up
 commit, so the merge commit stays a pure merge).
 
+## IMPORTANT!!! ripgrep: `-r` is "replace", not "recursive"
+
+In `rg`, `-r` is `--replace`: it silently rewrites the matched text in the
+*displayed output* (files are untouched), producing garbled, misleading
+results — e.g. `rg -rn foo` shows every match with the matched text replaced
+by the literal string `n`. Never pass `-r` out of `grep -r` habit: `rg`
+searches recursively by default, so plain `rg -n foo` is all you need.
+
 ## macOS `sed` in-place editing
 
 On macOS, `sed -i ''` (with a space) fails — the empty string must be attached
@@ -59,6 +67,13 @@ directly to the flag:
 sed -i'' 's/foo/bar/g' file.txt   # correct
 sed -i '' 's/foo/bar/g' file.txt  # wrong on macOS
 ```
+
+## Deleting with shell variables
+
+When deleting with a shell variable, always guard it: `rm -rf "${VAR:?}"/*`,
+never `rm -rf "$VAR"/*`. If the variable is unset or empty, the unguarded form
+expands to `rm -rf /*`; `${VAR:?}` aborts instead. Prefer literal paths when
+you know them.
 
 ## npm Publishing
 
